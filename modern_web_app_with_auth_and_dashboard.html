@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Hub - Authentication & Home Dashboard</title>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter & Cairo for Arabic support if needed) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            100: '#e0edff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Glassmorphism & Animations */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.25);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .animated-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .auth-container {
+            perspective: 1000px;
+        }
+
+        .flip-card-inner {
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .flip-card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flip-front, .flip-back {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .flip-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Smooth page transition */
+        .page-view {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        
+        .page-hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            width: 100%;
+            transform: scale(0.98);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <!-- Toast Notification System -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <!-- =================================================================== -->
+    <!-- 1. AUTHENTICATION SECTION (Sign In / Sign Up)                       -->
+    <!-- =================================================================== -->
+    <section id="auth-page" class="page-view animated-bg min-h-screen flex items-center justify-center p-4">
+        <div class="auth-container w-full max-w-md">
+            <div id="flip-card" class="flip-card-inner relative w-full min-h-[580px]">
+
+                <!-- SIGN IN FORM (Front) -->
+                <div class="flip-front absolute w-full h-full glass-dark rounded-3xl p-8 flex flex-col justify-between border border-slate-700/50 shadow-2xl">
+                    <div>
+                        <div class="text-center mb-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600/20 text-brand-500 border border-brand-500/30 mb-3 shadow-lg shadow-brand-500/10">
+                                <i class="fa-solid fa-cube text-3xl"></i>
+                            </div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Welcome Back</h2>
+                            <p class="text-slate-400 text-sm mt-1">Sign in to access your workspace</p>
+                        </div>
+
+                        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Email Address</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                        <i class="fa-regular fa-envelope"></i>
+                                    </span>
+                                    <input type="email" id="login-email" required
+                                        class="w-full pl-11 pr-4 py-3 bg-slate-900/60 border border-slate-700 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm text-slate-100 transition placeholder-slate-500"
+                                        placeholder="user@example.com" value="demo@workspace.com">
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Password</label>
+                                    <a href="#" class="text-xs text-brand-500 hover:text-brand-400 font-medium transition">Forgot?</a>
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </span>
+                                    <input type="password" id="login-password" required
+                                        class="w-full pl-11 pr-11 py-3 bg-slate-900/60 border border-slate-700 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm text-slate-100 transition placeholder-slate-500"
+                                        placeholder="••••••••" value="password123">
+                                    <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-200">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="w-4 h-4 rounded border-slate-700 text-brand-600 focus:ring-brand-500 bg-slate-900">
+                                    <span class="text-xs text-slate-300">Remember me</span>
+                                </label>
+                            </div>
+
+                            <button type="submit" id="btn-login"
+                                class="w-full py-3.5 px-4 bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition duration-300 flex items-center justify-center gap-2 group">
+                                <span>Sign In</span>
+                                <i class="fa-solid fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="text-center pt-4 border-t border-slate-800">
+                        <p class="text-xs text-slate-400">
+                            Don't have an account? 
+                            <button onclick="toggleAuthMode()" class="text-brand-500 hover:text-brand-400 font-semibold transition ml-1">Sign Up</button>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SIGN UP FORM (Back) -->
+                <div class="flip-back absolute w-full h-full glass-dark rounded-3xl p-8 flex flex-col justify-between border border-slate-700/50 shadow-2xl">
+                    <div>
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 mb-2 shadow-lg">
+                                <i class="fa-solid fa-user-plus text-2xl"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-white tracking-tight">Create Account</h2>
+                            <p class="text-slate-400 text-xs mt-1">Get started with your free account today</p>
+                        </div>
+
+                        <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Full Name</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                        <i class="fa-regular fa-user"></i>
+                                    </span>
+                                    <input type="text" id="reg-name" required
+                                        class="w-full pl-11 pr-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm text-slate-100 transition"
+                                        placeholder="Alex Johnson">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Email Address</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                        <i class="fa-regular fa-envelope"></i>
+                                    </span>
+                                    <input type="email" id="reg-email" required
+                                        class="w-full pl-11 pr-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm text-slate-100 transition"
+                                        placeholder="alex@example.com">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">Password</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </span>
+                                    <input type="password" id="reg-password" required minlength="6"
+                                        class="w-full pl-11 pr-4 py-2.5 bg-slate-900/60 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm text-slate-100 transition"
+                                        placeholder="At least 6 characters">
+                                </div>
+                            </div>
+
+                            <button type="submit"
+                                class="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition duration-300 flex items-center justify-center gap-2 mt-2">
+                                <span>Create Account</span>
+                                <i class="fa-solid fa-user-check text-xs"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="text-center pt-3 border-t border-slate-800">
+                        <p class="text-xs text-slate-400">
+                            Already have an account? 
+                            <button onclick="toggleAuthMode()" class="text-indigo-400 hover:text-indigo-300 font-semibold transition ml-1">Sign In</button>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 2. HOME DASHBOARD SECTION (Appears after login)                     -->
+    <!-- =================================================================== -->
+    <div id="home-page" class="page-view page-hidden min-h-screen flex flex-col justify-between bg-slate-950">
+
+        <!-- NAVBAR -->
+        <nav class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    
+                    <!-- Brand Logo -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-bold shadow-lg shadow-brand-500/20">
+                            <i class="fa-solid fa-cube text-xl"></i>
+                        </div>
+                        <span class="text-lg font-bold tracking-wider text-white">NEXUS<span class="text-brand-500">LABS</span></span>
+                    </div>
+
+                    <!-- Navigation Links (Desktop) -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="#hero" class="px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-800/80">Home</a>
+                        <a href="#features" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition">Features</a>
+                        <a href="#analytics" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition">Analytics</a>
+                        <a href="#docs" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition">Docs</a>
+                    </div>
+
+                    <!-- User Dropdown & Controls -->
+                    <div class="hidden md:flex items-center gap-4">
+                        <div class="relative">
+                            <input type="text" placeholder="Search..." 
+                                class="w-48 py-1.5 pl-8 pr-3 bg-slate-800/80 border border-slate-700/60 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-brand-500 w-48 focus:w-64 transition-all">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+                        </div>
+
+                        <div class="relative group">
+                            <button class="flex items-center gap-3 p-1 rounded-xl hover:bg-slate-800/60 transition">
+                                <img id="user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" 
+                                     alt="Avatar" class="w-9 h-9 rounded-lg object-cover border border-slate-700">
+                                <div class="text-left hidden lg:block">
+                                    <div id="user-display-name" class="text-xs font-semibold text-white">Alex Johnson</div>
+                                    <div class="text-[10px] text-slate-400">Pro Member</div>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                            </button>
+
+                            <!-- User Dropdown Menu -->
+                            <div class="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <a href="#" class="block px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"><i class="fa-regular fa-user mr-2"></i> Profile</a>
+                                <a href="#" class="block px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-gear mr-2"></i> Settings</a>
+                                <div class="border-t border-slate-800 my-1"></div>
+                                <button onclick="handleLogout()" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-slate-800 hover:text-rose-300 flex items-center">
+                                    <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Menu Button -->
+                    <div class="md:hidden flex items-center">
+                        <button onclick="toggleMobileMenu()" class="text-slate-400 hover:text-white p-2">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div id="mobile-menu" class="hidden md:hidden bg-slate-900 border-b border-slate-800 px-4 pt-2 pb-4 space-y-2">
+                <a href="#hero" class="block px-3 py-2 rounded-lg text-base font-medium text-white bg-slate-800">Home</a>
+                <a href="#features" class="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Features</a>
+                <a href="#analytics" class="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Analytics</a>
+                <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-8 h-8 rounded-lg object-cover">
+                        <span id="mobile-user-name" class="text-sm font-medium text-white">Alex Johnson</span>
+                    </div>
+                    <button onclick="handleLogout()" class="px-3 py-1.5 bg-rose-600/20 text-rose-400 rounded-lg text-xs font-semibold">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+        <main class="flex-grow">
+            
+            <!-- HERO SECTION -->
+            <section id="hero" class="relative overflow-hidden py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-800/80">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-brand-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+                
+                <div class="max-w-5xl mx-auto text-center relative z-10">
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-400 border border-brand-500/20 mb-6">
+                        <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+                        Version 3.0 Live Dashboard
+                    </span>
+                    <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6">
+                        Next Generation Analytics <br>
+                        <span class="bg-gradient-to-r from-brand-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Powering Modern Teams</span>
+                    </h1>
+                    <p class="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                        Seamlessly monitor metrics, streamline deployments, and scale your infrastructure with our state-of-the-art interactive workspace platform.
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a href="#analytics" class="w-full sm:w-auto px-8 py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/25 transition">
+                            Explore Workspace
+                        </a>
+                        <a href="#features" class="w-full sm:w-auto px-8 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 transition">
+                            Documentation
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STATS CARDS SECTION -->
+            <section class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400">Total Revenue</p>
+                                <h3 class="text-2xl font-bold text-white mt-1">$128,430</h3>
+                            </div>
+                            <span class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl text-lg"><i class="fa-solid fa-arrow-trend-up"></i></span>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-emerald-400">
+                            <i class="fa-solid fa-angle-up"></i>
+                            <span>+12.5% from last month</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400">Active Users</p>
+                                <h3 class="text-2xl font-bold text-white mt-1">14,290</h3>
+                            </div>
+                            <span class="p-2.5 bg-brand-500/10 text-brand-400 rounded-xl text-lg"><i class="fa-solid fa-users"></i></span>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-brand-400">
+                            <i class="fa-solid fa-angle-up"></i>
+                            <span>+8.2% new users</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400">System Uptime</p>
+                                <h3 class="text-2xl font-bold text-white mt-1">99.98%</h3>
+                            </div>
+                            <span class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl text-lg"><i class="fa-solid fa-server"></i></span>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-slate-400">
+                            <span>Stable operation</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-400">Conversion Rate</p>
+                                <h3 class="text-2xl font-bold text-white mt-1">3.42%</h3>
+                            </div>
+                            <span class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl text-lg"><i class="fa-solid fa-bolt"></i></span>
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-purple-400">
+                            <i class="fa-solid fa-angle-up"></i>
+                            <span>+1.1% efficiency</span>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- FEATURES GRID -->
+            <section id="features" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div class="mb-10 text-center sm:text-left">
+                    <h2 class="text-2xl font-bold text-white">Core Features</h2>
+                    <p class="text-slate-400 text-sm mt-1">Everything you need to scale modern applications</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:border-brand-500/50 hover:bg-slate-900/80 transition duration-300 group">
+                        <div class="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-xl mb-5 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Enterprise Security</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            End-to-end encryption with advanced role-based access control to keep your business safe.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:border-indigo-500/50 hover:bg-slate-900/80 transition duration-300 group">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl mb-5 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Real-time Analytics</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Live telemetry and data stream visualizations with sub-second latency updates.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:border-purple-500/50 hover:bg-slate-900/80 transition duration-300 group">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-xl mb-5 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">AI-Powered Insights</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Automated anomaly detection and intelligent predictive modeling out of the box.
+                        </p>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ANALYTICS PREVIEW SECTION -->
+            <section id="analytics" class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-16">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">System Performance</h2>
+                            <p class="text-xs text-slate-400">Live monitoring server response metrics</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1.5 bg-slate-800 text-xs font-medium text-slate-300 rounded-lg hover:bg-slate-700">Daily</button>
+                            <button class="px-3 py-1.5 bg-brand-600 text-xs font-medium text-white rounded-lg">Weekly</button>
+                        </div>
+                    </div>
+
+                    <!-- Animated Progress Bars / Metric Visualization -->
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-2">
+                                <span class="text-slate-300">Database Capacity</span>
+                                <span class="text-brand-400">78%</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-brand-600 to-indigo-500 rounded-full transition-all duration-1000" style="width: 78%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-2">
+                                <span class="text-slate-300">API Gateway Throughput</span>
+                                <span class="text-indigo-400">92%</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-indigo-600 to-purple-500 rounded-full transition-all duration-1000" style="width: 92%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-2">
+                                <span class="text-slate-300">Storage Usage</span>
+                                <span class="text-emerald-400">45%</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full transition-all duration-1000" style="width: 45%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-slate-900 border-t border-slate-800 py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-cube text-brand-500 text-xl"></i>
+                        <span class="text-base font-bold text-white">NEXUS LABS</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Building the modern web infrastructure for forward-thinking engineering teams worldwide.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-200 mb-4">Product</h4>
+                    <ul class="space-y-2 text-xs text-slate-400">
+                        <li><a href="#" class="hover:text-white transition">Features</a></li>
+                        <li><a href="#" class="hover:text-white transition">Integrations</a></li>
+                        <li><a href="#" class="hover:text-white transition">Enterprise</a></li>
+                        <li><a href="#" class="hover:text-white transition">Pricing</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-200 mb-4">Resources</h4>
+                    <ul class="space-y-2 text-xs text-slate-400">
+                        <li><a href="#" class="hover:text-white transition">Documentation</a></li>
+                        <li><a href="#" class="hover:text-white transition">API Reference</a></li>
+                        <li><a href="#" class="hover:text-white transition">Guides</a></li>
+                        <li><a href="#" class="hover:text-white transition">System Status</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-200 mb-4">Stay Connected</h4>
+                    <div class="flex gap-3 mb-4 text-slate-400">
+                        <a href="#" class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-white hover:bg-slate-700 transition"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-white hover:bg-slate-700 transition"><i class="fa-brands fa-github"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center hover:text-white hover:bg-slate-700 transition"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-7xl mx-auto pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 gap-4">
+                <p>&copy; 2026 Nexus Labs Inc. All rights reserved.</p>
+                <div class="flex gap-6">
+                    <a href="#" class="hover:text-slate-400">Privacy Policy</a>
+                    <a href="#" class="hover:text-slate-400">Terms of Service</a>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 3. JAVASCRIPT LOGIC & ROUTING                                      -->
+    <!-- =================================================================== -->
+    <script>
+        // State Management
+        let currentUser = null;
+
+        // Toggle Password Input Visibility
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Card Flip Effect (Sign In <-> Sign Up)
+        function toggleAuthMode() {
+            const card = document.getElementById('flip-card');
+            card.classList.toggle('flipped');
+        }
+
+        // Custom Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const isSuccess = type === 'success';
+            const bgColor = isSuccess ? 'bg-slate-900 border-emerald-500/50' : 'bg-slate-900 border-rose-500/50';
+            const iconColor = isSuccess ? 'text-emerald-400' : 'text-rose-400';
+            const iconClass = isSuccess ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border ${bgColor} shadow-2xl text-slate-200 text-xs transform transition-all duration-300 translate-y-[-10px] opacity-0`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} ${iconColor} text-base"></i>
+                <span class="font-medium">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Handle Login Submission
+        function handleLogin(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-login');
+            const email = document.getElementById('login-email').value;
+
+            // Loading state
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-sm"></i> Authenticating...`;
+
+            setTimeout(() => {
+                currentUser = {
+                    name: email.split('@')[0] || 'Alex Johnson',
+                    email: email
+                };
+
+                // Update UI elements with logged-in user details
+                document.getElementById('user-display-name').innerText = currentUser.name;
+                document.getElementById('mobile-user-name').innerText = currentUser.name;
+
+                showToast('Signed in successfully! Welcome back.');
+                
+                // Transition to Home Page
+                switchView('home-page');
+                
+                // Reset button state
+                btn.disabled = false;
+                btn.innerHTML = `<span>Sign In</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
+            }, 1000);
+        }
+
+        // Handle Registration
+        function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+
+            showToast('Account created! Please sign in with your credentials.');
+            
+            // Populate Sign In input with created email and flip back
+            document.getElementById('login-email').value = email;
+            toggleAuthMode();
+        }
+
+        // View Router Function
+        function switchView(targetId) {
+            const authPage = document.getElementById('auth-page');
+            const homePage = document.getElementById('home-page');
+
+            if (targetId === 'home-page') {
+                authPage.classList.add('page-hidden');
+                setTimeout(() => {
+                    homePage.classList.remove('page-hidden');
+                    window.scrollTo(0, 0);
+                }, 200);
+            } else {
+                homePage.classList.add('page-hidden');
+                setTimeout(() => {
+                    authPage.classList.remove('page-hidden');
+                    window.scrollTo(0, 0);
+                }, 200);
+            }
+        }
+
+        // Logout Handler
+        function handleLogout() {
+            currentUser = null;
+            showToast('Logged out successfully.', 'info');
+            switchView('auth-page');
+        }
+
+        // Mobile Nav Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
